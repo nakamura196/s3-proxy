@@ -11,6 +11,9 @@ const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 4000;
 
+// 固定のバケット名を環境変数から取得
+const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'default-bucket-name';
+
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -18,18 +21,18 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-
-app.get("/fetch-file", async (req: Request, res: Response) => {
+// パスパラメータとしてファイルパスを受け取る
+app.get("/*", async (req: Request, res: Response) => {
+  // リクエストURLから '/file/' を除いた部分をキーとして使用
+  const key = req.path.substring('/'.length);
   
-  const { bucket, key } = req.query;
-
-  if (!bucket || !key) {
-    res.send("Missing bucket or key");
+  if (!key) {
+    res.status(400).send("ファイルパスが指定されていません");
   }
 
   s3.getObject({
-    Bucket: bucket as string,
-    Key: key as string,
+    Bucket: BUCKET_NAME,
+    Key: key,
   }).promise()
     .then(data => {
       res.setHeader("Access-Control-Allow-Origin", "*");
@@ -43,5 +46,5 @@ app.get("/fetch-file", async (req: Request, res: Response) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}: ${BUCKET_NAME}`);
 });
